@@ -1,0 +1,4 @@
+/* Override Styles */
+main {
+    padding-top: 120px; /* Adjusted to ensure content is below the header */
+}

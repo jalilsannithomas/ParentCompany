@@ -1,0 +1,5 @@
+# Ignore database credentials
+settings/db_cred.php
+
+# Ignore system files
+.DS_Store
