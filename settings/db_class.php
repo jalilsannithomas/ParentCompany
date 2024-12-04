@@ -4,7 +4,11 @@ if (!class_exists('db_connection')) {
         protected $db;
 
         public function __construct() {
-            $url = parse_url(getenv("JAWSDB_URL"));
+            $url = getenv("JAWSDB_URL");
+            if (!$url) {
+                die("Database connection URL not set.");
+            }
+            $url = parse_url($url);
             $server = $url["host"];
             $username = $url["user"];
             $password = $url["pass"];
