@@ -1,12 +1,16 @@
 <?php
-require_once('db_cred.php');
-
 if (!class_exists('db_connection')) {
     class db_connection {
         protected $db;
 
         public function __construct() {
-            $this->db = mysqli_connect(SERVER, USERNAME, PASSWD, DATABASE);
+            $url = parse_url(getenv("JAWSDB_URL"));
+            $server = $url["host"];
+            $username = $url["user"];
+            $password = $url["pass"];
+            $db = substr($url["path"], 1);
+
+            $this->db = mysqli_connect($server, $username, $password, $db);
             if (mysqli_connect_errno()) {
                 die("Failed to connect to MySQL: " . mysqli_connect_error());
             }
