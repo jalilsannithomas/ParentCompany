@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../settings/core.php');
+ob_clean();
 
 if(!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -11,7 +12,14 @@ include('header.php');
 include("../controllers/cart_controller.php");
 
 $cart_items = get_cart_items_ctr($_SESSION['user_id']);
+if ($cart_items === false) {
+    $cart_items = array();
+}
+
 $total = get_cart_total_ctr($_SESSION['user_id']);
+if ($total === false) {
+    $total = array('total' => 0);
+}
 ?>
 
 <div class="section" id="cart-page">
@@ -62,11 +70,11 @@ $total = get_cart_total_ctr($_SESSION['user_id']);
                     <h2>Order Summary</h2>
                     <div class="summary-row">
                         <span>Subtotal</span>
-                        <span>$<?= number_format($total['total'], 2) ?></span>
+                        <span>$<?= number_format(isset($total['total']) ? $total['total'] : 0, 2) ?></span>
                     </div>
                     <div class="summary-row total">
                         <span>Total</span>
-                        <span>$<?= number_format($total['total'], 2) ?></span>
+                        <span>$<?= number_format(isset($total['total']) ? $total['total'] : 0, 2) ?></span>
                     </div>
                     <form action="checkout.php" method="POST">
                         <button type="submit" name="proceed_checkout" class="btn btn-primary">Proceed to Checkout</button>

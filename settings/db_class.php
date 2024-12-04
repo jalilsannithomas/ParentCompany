@@ -1,41 +1,41 @@
 <?php
+require_once(__DIR__ . '/db_cred.php');
+
 if (!class_exists('db_connection')) {
     class db_connection {
         protected $db;
 
         public function __construct() {
-            $url = getenv("JAWSDB_URL");
-            if (!$url) {
-                die("Database connection URL not set.");
-            }
-            $url = parse_url($url);
-            $server = $url["host"];
-            $username = $url["user"];
-            $password = $url["pass"];
-            $db = substr($url["path"], 1);
-
+            $server = SERVER;
+            $username = USERNAME;
+            $password = PASSWD;
+            $db = DATABASE;
+            
             $this->db = mysqli_connect($server, $username, $password, $db);
             if (mysqli_connect_errno()) {
-                die("Failed to connect to MySQL: " . mysqli_connect_error());
+                $error = "Failed to connect to MySQL: " . mysqli_connect_error();
+                error_log($error);
+                die($error);
             }
         }
 
         public function db_query($sql) {
             $result = $this->db->query($sql);
             if (!$result) {
-                error_log("SQL Error: " . $this->db->error);
+                error_log("SQL Error: " . $this->db->error . " in query: " . substr($sql, 0, 500));
+                return false;
             }
             return $result;
         }
 
         public function db_fetch_all($sql) {
             $result = $this->db_query($sql);
-            return $result ? $result->fetch_all(MYSQLI_ASSOC) : false;
+            return $result !== false ? $result->fetch_all(MYSQLI_ASSOC) : false;
         }
-
+        
         public function db_fetch_one($sql) {
             $result = $this->db_query($sql);
-            return $result ? $result->fetch_assoc() : false;
+            return $result !== false ? $result->fetch_assoc() : false;
         }
 
         public function db_count() {

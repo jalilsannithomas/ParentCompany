@@ -1,4 +1,9 @@
 <?php
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 require_once('../settings/security.php');
 
@@ -8,7 +13,7 @@ if(!isset($_SESSION['user_id'])) {
 }
 
 include('header.php');
-include('../controllers/order_controller.php');
+require_once('../controllers/order_controller.php');
 
 if(isset($_GET['order_id'])) {
     $order_id = $_GET['order_id'];
@@ -16,7 +21,7 @@ if(isset($_GET['order_id'])) {
     $order_summary = get_order_summary_ctr($order_id);
 } else {
     header("Location: user_dashboard.php");
-    exit();
+
 }
 ?>
 

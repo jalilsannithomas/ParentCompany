@@ -8,7 +8,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 include_once("../controllers/raffle_controller.php");
-$entries = get_all_entries_ctr();
+$entries = json_decode(get_all_entries_ctr(), true);
+if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
+    error_log("JSON decode error: " . json_last_error_msg());
+    $entries = array();
+}
 ?>
 
 <!DOCTYPE html>
@@ -58,6 +62,23 @@ $entries = get_all_entries_ctr();
         }
 
         .error-card p {
+            color: #fff;
+        }
+
+        .loading-card {
+            background: #1a1a1a;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .loading-card h3 {
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .loading-card p {
             color: #fff;
         }
 
@@ -145,9 +166,9 @@ $entries = get_all_entries_ctr();
                             <?php foreach($entries as $entry): ?>
                                 <tr>
                                     <td><?= date('M d, Y', strtotime($entry['created_at'])) ?></td>
-                                    <td><?= $entry['name'] ?></td>
-                                    <td><?= $entry['phone'] ?></td>
-                                    <td>@<?= $entry['instagram'] ?></td>
+                                    <td><?= htmlspecialchars($entry['name']) ?></td>
+                                    <td><?= htmlspecialchars($entry['phone']) ?></td>
+                                    <td>@<?= htmlspecialchars($entry['instagram']) ?></td>
                                     <td>
                                         <button class="btn-small btn-danger" 
                                                 onclick="deleteEntry(<?= $entry['entry_id'] ?>)">
@@ -176,18 +197,61 @@ $entries = get_all_entries_ctr();
         </div>
     </div>
 
+    <?php
+    require_once('../classes/raffle_class.php');
+
+    $raffle = new raffle_class();
+
+    $entries = json_decode($raffle->get_all_entries(), true);
+
+    if ($entries['success']) {
+        echo '<div class="entries-list">';
+        echo '<h2>Raffle Entries</h2>';
+        echo '<ul>';
+        foreach ($entries['data'] as $entry) {
+            echo '<li>' . htmlspecialchars($entry['name']) . ' - ' . htmlspecialchars($entry['phone']) . '</li>';
+        }
+        echo '</ul>';
+        echo '</div>';
+    } else {
+        echo '<div class="alert error">' . htmlspecialchars($entries['message']) . '</div>';
+    }
+    ?>
+
     <script>
     function exportEntries() {
         window.location.href = '../actions/admin_export_raffle.php';
     }
 
     function selectWinner() {
-        fetch('../actions/admin_select_winner.php')
-        .then(response => response.json())
+        const modal = document.getElementById('winner-modal');
+        const detailsDiv = document.getElementById('winner-details');
+        
+        // Show loading state
+        detailsDiv.innerHTML = `
+            <div class="loading-card">
+                <h3>🔄 Selecting Winner...</h3>
+                <p>Please wait...</p>
+            </div>
+        `;
+        modal.style.display = 'block';
+
+        // Use absolute path
+        fetch('/ReThread_Collective/actions/admin_select_winner.php', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            const modal = document.getElementById('winner-modal');
-            const detailsDiv = document.getElementById('winner-details');
-            
             if(data.success) {
                 detailsDiv.innerHTML = `
                     <div class="winner-card">
@@ -206,19 +270,21 @@ $entries = get_all_entries_ctr();
                     </div>
                 `;
             }
-            modal.style.display = 'block';
         })
         .catch(error => {
             console.error('Error:', error);
-            const modal = document.getElementById('winner-modal');
-            const detailsDiv = document.getElementById('winner-details');
             detailsDiv.innerHTML = `
                 <div class="error-card">
                     <h3>⚠️ Error</h3>
-                    <p>Failed to communicate with the server. Please try again.</p>
+                    <p>Failed to communicate with the server. Please check:</p>
+                    <ul>
+                        <li>Your internet connection</li>
+                        <li>That you're still logged in</li>
+                        <li>That the server is running</li>
+                    </ul>
+                    <p class="error-details">Error: ${error.message}</p>
                 </div>
             `;
-            modal.style.display = 'block';
         });
     }
 

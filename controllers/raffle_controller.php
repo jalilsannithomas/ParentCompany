@@ -1,5 +1,5 @@
 <?php
-include("../classes/raffle_class.php");
+include_once("../classes/raffle_class.php");
 
 function add_raffle_entry_ctr($name, $phone, $instagram) {
     // Validate name
@@ -60,5 +60,10 @@ function get_recent_entries_ctr($limit = 10) {
 function get_entry_count_ctr() {
     $raffle = new raffle_class();
     return $raffle->get_entry_count();
+}
+
+function select_winner_ctr() {
+    $raffle = new raffle_class();
+    return $raffle->select_winner();
 }
 ?>

@@ -1,4 +1,10 @@
 <?php
+
+ini_set('log_errors', 1);
+ini_set('error_log', '../error.log');
+error_reporting(0);
+ini_set('display_errors', 0);
+
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -11,6 +17,7 @@ function check_login() {
     }
     return true;
 }
+
 
 function get_user_id() {
     return isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;

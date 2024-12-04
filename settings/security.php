@@ -1,4 +1,6 @@
 <?php
+
+error_log("Security file loaded");
 // Session timeout configuration
 define('SESSION_TIMEOUT', 1800); // 30 minutes in seconds
 
