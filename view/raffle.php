@@ -50,23 +50,27 @@ $error_msg = '';
     
     <div class="raffle-container">
         <div class="raffle-content">
-            <form action="../actions/raffleentry.php" method="POST" class="raffle-form">
+            <form action="../actions/raffleentry.php" method="POST" class="raffle-form" id="raffleForm">
                 <div class="form-group">
                     <input type="text" id="name" name="name" required 
-                           maxlength="100" placeholder="Your Name">
+                           maxlength="100" placeholder="Your Name"
+                           pattern="[A-Za-z\s]{2,100}"
+                           title="Please enter a valid name (2-100 characters, letters and spaces only)">
                 </div>
                 
                 <div class="form-group">
                     <input type="tel" id="phone" name="phone" required 
                            pattern="^\+?[0-9]{10,15}$" 
-                           placeholder="+233xxxxxxxxx">
+                           placeholder="+233xxxxxxxxx"
+                           title="Please enter a valid phone number (10-15 digits, optionally starting with +)">
                     <small>Mobile Money number for prize delivery</small>
                 </div>
                 
                 <div class="form-group">
                     <input type="text" id="instagram" name="instagram" required 
                            pattern="@?[a-zA-Z0-9._]{1,30}" 
-                           placeholder="@yourusername">
+                           placeholder="@yourusername"
+                           title="Please enter a valid Instagram handle (letters, numbers, dots, and underscores only)">
                 </div>
                 
                 <button type="submit" name="enter_raffle" class="submit-btn">Submit Entry</button>
@@ -237,5 +241,39 @@ $error_msg = '';
     }
 }
 </style>
+
+<script>
+document.getElementById('raffleForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const instagram = document.getElementById('instagram').value.trim();
+    
+    let isValid = true;
+    let errorMessage = '';
+    
+    // Validate name
+    if (!name.match(/^[A-Za-z\s]{2,100}$/)) {
+        isValid = false;
+        errorMessage = 'Please enter a valid name (2-100 characters, letters and spaces only)';
+    }
+    
+    // Validate phone
+    if (!phone.match(/^\+?[0-9]{10,15}$/)) {
+        isValid = false;
+        errorMessage = 'Please enter a valid phone number (10-15 digits, optionally starting with +)';
+    }
+    
+    // Validate Instagram
+    if (!instagram.match(/^@?[a-zA-Z0-9._]{1,30}$/)) {
+        isValid = false;
+        errorMessage = 'Please enter a valid Instagram handle';
+    }
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert(errorMessage);
+    }
+});
+</script>
 
 <?php include('footer.php'); ?>

@@ -75,14 +75,14 @@ if($size || $color || $price_range) {
         <?php else: ?>
             <?php foreach($products as $product): ?>
                 <div class="product">
-                    <img src="../images/products/<?= htmlspecialchars($product['product_image']) ?>"
+                    <img src="images/products/<?= htmlspecialchars($product['product_image']) ?>"
                          alt="<?= htmlspecialchars($product['product_name']) ?>"
                          class="product-image"
                          onerror="this.src='images/products/default.png'">
                     <h2 class="product-name"><?= htmlspecialchars($product['product_name']) ?></h2>
                     <p class="product-price">$<?= number_format($product['product_price'], 2) ?></p>
                     <p class="stock-info">Available Stock: <?= htmlspecialchars($product['product_stock']) ?></p>
-                    <form action="../actions/addtocart.php" method="POST">
+                    <form action="actions/addtocart.php" method="POST">
                         <input type="hidden" name="product_id" value="<?= $product['product_id'] ?>">
                         <select name="size" required>
                             <option value="Medium">Medium</option>

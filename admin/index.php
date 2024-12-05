@@ -4,9 +4,6 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 session_start();
-error_log("Session ID: " . session_id());
-error_log("Session data: " . print_r($_SESSION, true));
-
 require_once('../settings/security.php');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
@@ -22,8 +19,6 @@ $total_products = get_product_count_ctr();
 $recent_orders = get_recent_orders_ctr();
 $recent_entries = get_recent_entries_ctr(5);
 $total_orders = get_orders_count_ctr();
-
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -32,6 +27,7 @@ $total_orders = get_orders_count_ctr();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Parent Company</title>
     <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/admin.css">
     <style>
     /* Admin-specific styles - Dark Theme */
     body {
@@ -51,7 +47,7 @@ $total_orders = get_orders_count_ctr();
         padding: 20px;
     }
 
-    .admin-content {
+    .admin-main {
         flex: 1;
         padding: 20px;
         background-color: #1a1a1a;
@@ -67,7 +63,7 @@ $total_orders = get_orders_count_ctr();
         border-radius: 8px;
     }
 
-    .stats-grid {
+    .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
@@ -121,7 +117,7 @@ $total_orders = get_orders_count_ctr();
         background-color: #45a049;
     }
 
-    .admin-section {
+    .recent-activity {
         background-color: #2c2c2c;
         padding: 20px;
         border-radius: 8px;
@@ -129,9 +125,36 @@ $total_orders = get_orders_count_ctr();
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
-    .admin-section h2 {
+    .recent-activity h2 {
         color: #e0e0e0;
         margin-bottom: 15px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .status-pending {
+        background-color: #ff9800;
+        color: #fff;
+    }
+
+    .status-shipped {
+        background-color: #4caf50;
+        color: #fff;
+    }
+
+    .status-delivered {
+        background-color: #03a9f4;
+        color: #fff;
     }
 
     @media (max-width: 768px) {
@@ -143,7 +166,7 @@ $total_orders = get_orders_count_ctr();
             width: 100%;
         }
         
-        .stats-grid {
+        .dashboard-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -151,90 +174,89 @@ $total_orders = get_orders_count_ctr();
 </head>
 <body class="admin-body">
     <div class="admin-wrapper">
-        <?php 
-        echo "<!-- Debug: Before sidebar include -->\n";
-        include('includes/sidebar.php');
-        echo "<!-- Debug: After sidebar include -->\n";
-        ?>
-        <div class="admin-content">
-            <div class="admin-header">
-                <h1>Admin Dashboard</h1>
+        <?php include('includes/sidebar.php'); ?>
+        
+        <main class="admin-main">
+            <header class="admin-header">
+                <h1>Dashboard</h1>
                 <div class="admin-user">
-                    Admin: <?= isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name']) : 'Unknown' ?>
+                    Admin: <?php echo isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name']) : 'Unknown'; ?>
                 </div>
-            </div>
+            </header>
 
-            <div class="stats-grid">
+            <div class="dashboard-grid">
                 <div class="stat-card">
                     <h3>Total Products</h3>
-                    <p class="stat-number"><?= $total_products ?></p>
+                    <p class="stat-number"><?php echo $total_products; ?></p>
                 </div>
+                
                 <div class="stat-card">
                     <h3>Total Orders</h3>
-                    <p class="stat-number"><?= $total_orders ?></p>
+                    <p class="stat-number"><?php echo $total_orders; ?></p>
                 </div>
+                
                 <div class="stat-card">
-                    <h3>Raffle Entries</h3>
-                    <p class="stat-number"><?= get_entry_count_ctr() ?></p>
+                    <h3>Recent Raffle Entries</h3>
+                    <p class="stat-number"><?php echo count($recent_entries); ?></p>
                 </div>
             </div>
 
-            <div class="admin-section">
-    <h2>Recent Orders</h2>
-    <table class="admin-table">
-        <thead>
-            <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Total</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($recent_orders as $order): ?>
-                <tr>
-                    <td>#<?= isset($order['order_id']) ? htmlspecialchars($order['order_id']) : 'N/A' ?></td>
-                    <td><?= isset($order['customer_name']) ? htmlspecialchars($order['customer_name']) : 'N/A' ?></td>
-                    <td>$<?= isset($order['order_amount']) ? number_format($order['order_amount'], 2) : '0.00' ?></td>
-                    <td><?= isset($order['created_at']) ? date('M d, Y', strtotime($order['created_at'])) : 'N/A' ?></td>
-                    <td><?= isset($order['order_status']) ? ucfirst($order['order_status']) : 'N/A' ?></td>
-                    <td>
-                        <a href="order_details.php?order_id=<?= isset($order['order_id']) ? $order['order_id'] : '' ?>" class="btn-small">View</a>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-            <div class="admin-section">
-                <h2>Recent Raffle Entries</h2>
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Phone</th>
-                            <th>Instagram</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($recent_entries as $entry): ?>
+            <section class="recent-activity">
+                <h2>Recent Orders</h2>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
                             <tr>
-                                <td><?= isset($entry['name']) ? htmlspecialchars($entry['name']) : 'N/A' ?></td>
-                                <td><?= isset($entry['phone']) ? htmlspecialchars($entry['phone']) : 'N/A' ?></td>
-                                <td>@<?= isset($entry['instagram']) ? htmlspecialchars($entry['instagram']) : 'N/A' ?></td>
-                                <td><?= isset($entry['created_at']) ? date('M d, Y', strtotime($entry['created_at'])) : 'N/A' ?></td>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+                        </thead>
+                        <tbody>
+                            <?php foreach($recent_orders as $order): ?>
+                                <tr>
+                                    <td>#<?php echo $order['order_id']; ?></td>
+                                    <td><?php echo htmlspecialchars($order['customer_name']); ?></td>
+                                    <td>GH₵<?php echo number_format($order['order_amount'], 2); ?></td>
+                                    <td><span class="status-badge status-<?php echo strtolower($order['order_status']); ?>"><?php echo $order['order_status']; ?></span></td>
+                                    <td><?php echo date('M d, Y', strtotime($order['order_date'])); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
-    <script src="js/admin.js"></script>
+            <section class="recent-activity">
+                <h2>Recent Raffle Entries</h2>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Entry ID</th>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Instagram</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($recent_entries as $entry): ?>
+                                <tr>
+                                    <td>#<?php echo $entry['entry_id']; ?></td>
+                                    <td><?php echo htmlspecialchars($entry['name']); ?></td>
+                                    <td><?php echo htmlspecialchars($entry['phone']); ?></td>
+                                    <td>@<?php echo htmlspecialchars($entry['instagram']); ?></td>
+                                    <td><?php echo date('M d, Y', strtotime($entry['created_at'])); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
 </body>
 </html>

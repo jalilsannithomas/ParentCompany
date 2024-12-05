@@ -1,9 +1,19 @@
--- Create database
-CREATE DATABASE IF NOT EXISTS ReThreadCollective
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
+-- Connect to the remote database server
+USE webtech_fall2024_jalil_sanni_thomas;
 
-USE ReThreadCollective;
+-- Set the user's host explicitly
+SET @user_host = 'jalil.sanni-thomas@169.239.251.102';
+
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS payment_logs;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_details;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS cart;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS raffle_entries;
+DROP TABLE IF EXISTS admin_logs;
 
 -- Products table
 CREATE TABLE IF NOT EXISTS products (
@@ -102,28 +112,22 @@ CREATE TABLE IF NOT EXISTS admin_logs (
 -- Raffle Entries Table
 CREATE TABLE IF NOT EXISTS raffle_entries (
     entry_id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    phone VARCHAR(15) NOT NULL UNIQUE,
-    instagram VARCHAR(30) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    name VARCHAR(100) NOT NULL CHECK (name != ''),
+    phone VARCHAR(15) NOT NULL UNIQUE CHECK (phone != ''),
+    instagram VARCHAR(30) NOT NULL CHECK (instagram != ''),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (created_at > '1970-01-01')
 );
 
--- Add indexes
-ALTER TABLE products ADD INDEX idx_price (product_price);
-ALTER TABLE products ADD INDEX idx_stock (product_stock);
-ALTER TABLE orders ADD INDEX idx_status (order_status);
-ALTER TABLE orders ADD INDEX idx_created (created_at);
-ALTER TABLE users ADD INDEX idx_email (user_email);
-ALTER TABLE users ADD INDEX idx_role (user_role);
-
--- Insert admin user (Password: Louise2000!)
-INSERT INTO users (user_name, user_email, user_pass, user_phone, user_role) 
+-- Insert admin user (Password: Louise2000)
+INSERT INTO users (user_name, user_email, user_pass, user_phone, user_role, user_status) 
 VALUES (
     'Admin', 
     'admin@parentcompany.com', 
-    '$$2y$10$eakFP.M9NWD3xPmB3naS5OBsF51jBNRERNlS8mAk8Tf1nEx9A6lKy', -- This is 'Louise2000!!' hashed
+    '$2y$10$eknJE2zj/eq5YZgZTMbW/esZo3cnl/T.zc83qdOHJZ3ZJ0G9K.q32', -- Hash for 'Louise2000'
     '+233000000000', 
-    'admin'
+    'admin',
+    1
 );
 
 -- Insert initial products

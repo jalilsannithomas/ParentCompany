@@ -71,5 +71,5 @@ if(empty($cart_items)) {
     </div>
 </div>
 <script src="https://js.paystack.co/v1/inline.js"></script>
-<script src="../js/pay.js"></script>
+<script src="../js/pay.js?v=<?= time() ?>"></script>
 <?php include('footer.php'); ?>

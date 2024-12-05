@@ -13,17 +13,30 @@ if(!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 include("../controllers/product_controller.php");
 
 if(isset($_POST['edit_product'])) {
+    // Validate product_id is set and not empty
+    if (!isset($_POST['product_id']) || empty($_POST['product_id'])) {
+        header("Location: ../admin/products.php?error=invalid_id");
+        exit();
+    }
+
     $id = $_POST['product_id'];
     $name = trim($_POST['product_name']);
     $price = $_POST['product_price'];
-    $stock = $_POST['product_stock'];
     $desc = trim($_POST['product_desc']);
-    $size = $_POST['size'];
-    $color = $_POST['color'];
+    $stock = $_POST['product_stock'];
+    $size = isset($_POST['size']) ? $_POST['size'] : 'Medium';
+    $color = isset($_POST['color']) ? $_POST['color'] : 'White';
     
+    // Get current product details
     $current_product = get_one_product_ctr($id);
+    if (!$current_product) {
+        header("Location: ../admin/products.php?error=product_not_found");
+        exit();
+    }
+    
     $image_path = $current_product['product_image'];
     
+    // Handle image upload if present
     if(isset($_FILES['product_image']) && $_FILES['product_image']['error'] === 0) {
         $allowed = ['jpg', 'jpeg', 'png'];
         $filename = $_FILES['product_image']['name'];
@@ -42,7 +55,8 @@ if(isset($_POST['edit_product'])) {
         }
     }
     
-    if(update_product_ctr($id, $name, $price, $desc, $stock, $image_path, $color, $size)) {
+    // Update product with correct parameter order
+    if(update_product_ctr($id, $name, $price, $desc, $stock, $size, $color)) {
         header("Location: ../admin/products.php?success=edit");
         exit();
     }

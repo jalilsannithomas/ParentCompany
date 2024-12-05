@@ -1,121 +1,115 @@
 <?php
-require_once(dirname(__FILE__).'/../settings/db_class.php');
+require_once(__DIR__ . '/../settings/db_class.php');
 
-class product_class extends db_connection {
-    public function add_product($name, $price, $desc, $stock, $color, $size, $image) {
-        $sql = "INSERT INTO products (product_name, product_price, product_desc, product_stock, color, size, product_image) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("sdsisss", $name, $price, $desc, $stock, $color, $size, $image);
-        return $stmt->execute();
-    }
-
+class Product extends db_connection {
+    // Get all products
     public function get_all_products() {
-        $sql = "SELECT * FROM products WHERE product_stock > 0";
-        error_log("SQL Query: " . $sql); // Log the query instead of echoing
-        $result = $this->db_query($sql);
-        if (!$result) {
-            error_log("Error executing query: " . $this->db->error); // Log the error
-            return []; // Return an empty array instead of false
-        }
+        $sql = "SELECT * FROM products";
         return $this->db_fetch_all($sql);
     }
-
+    
+    // Get one product
     public function get_one_product($id) {
         $sql = "SELECT * FROM products WHERE product_id = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_assoc();
+        $params = [$id];
+        return $this->db_fetch_one($sql, $params);
     }
-
-    public function update_product($id, $name, $price, $desc, $stock, $image, $color, $size) {
-        $sql = "UPDATE products SET product_name = ?, product_price = ?, product_desc = ?, product_stock = ?, product_image = ?, color = ?, size = ? WHERE product_id = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("sdsisssi", $name, $price, $desc, $stock, $image, $color, $size, $id);
-        return $stmt->execute();
+    
+    // Add product
+    public function add_product($name, $price, $desc, $category, $brand, $image, $keywords) {
+        $sql = "INSERT INTO products (product_name, product_price, product_desc, category, brand, product_image, keywords) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $params = [$name, $price, $desc, $category, $brand, $image, $keywords];
+        return $this->db_query($sql, $params);
     }
-
+    
+    // Update product
+    public function update_product($id, $name, $price, $desc, $stock, $size, $color) {
+        // Validate that id is not empty
+        if (empty($id)) {
+            error_log("Product update failed: Empty ID");
+            return false;
+        }
+        
+        $sql = "UPDATE products 
+                SET product_name = ?, 
+                    product_price = ?, 
+                    product_desc = ?, 
+                    product_stock = ?,
+                    size = ?,
+                    color = ?
+                WHERE product_id = ?";
+        $params = [$name, $price, $desc, $stock, $size, $color, $id];
+        $result = $this->db_query($sql, $params);
+        
+        if ($result === false) {
+            error_log("Product update failed for ID: " . $id);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Delete product
     public function delete_product($id) {
-        // First check if product exists and get its details
-        $product = $this->get_one_product($id);
-        if (!$product) {
+        $sql = "DELETE FROM products WHERE product_id = ?";
+        $params = [$id];
+        return $this->db_query($sql, $params);
+    }
+    
+    // Update stock
+    public function update_stock($product_id, $quantity) {
+        // First check if we have enough stock
+        $current_stock = $this->get_one_product($product_id)['stock'];
+        if ($current_stock < $quantity) {
             return false;
         }
-
-        try {
-            // Start transaction
-            $this->db->begin_transaction();
-
-            // Delete from cart first (due to foreign key constraint)
-            $sql = "DELETE FROM cart WHERE p_id = ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-
-            // Set product_id to NULL in order_details (soft delete approach for order history)
-            $sql = "UPDATE order_details SET product_id = NULL WHERE product_id = ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-
-            // Finally delete the product
-            $sql = "DELETE FROM products WHERE product_id = ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-
-            // Commit transaction
-            $this->db->commit();
-            return true;
-
-        } catch (Exception $e) {
-            // Rollback on error
-            $this->db->rollback();
-            error_log("Error deleting product: " . $e->getMessage());
-            return false;
-        }
+        
+        $sql = "UPDATE products SET stock = stock - ? WHERE product_id = ? AND stock >= ?";
+        $params = [$quantity, $product_id, $quantity];
+        return $this->db_query($sql, $params);
     }
-
-    public function get_product_count() {
-        $sql = "SELECT COUNT(*) as count FROM products";
-        $result = $this->db_fetch_one($sql);
-        return $result['count'];
+    
+    // Search products
+    public function search_products($term) {
+        $sql = "SELECT * FROM products WHERE product_name LIKE ? OR product_desc LIKE ? OR keywords LIKE ?";
+        $term = "%$term%";
+        $params = [$term, $term, $term];
+        return $this->db_fetch_all($sql, $params);
     }
-
-    public function filter_products($size, $color, $price_range) {
+    
+    // Filter products
+    public function filter_products($category, $brand, $min_price, $max_price) {
         $sql = "SELECT * FROM products WHERE 1=1";
-        $params = array();
-
-        if (!empty($size)) {
-            $sql .= " AND size = ?";
-            $params[] = $size;
+        $params = [];
+        
+        if ($category) {
+            $sql .= " AND category = ?";
+            $params[] = $category;
         }
-        if (!empty($color)) {
-            $sql .= " AND color = ?";
-            $params[] = $color;
+        
+        if ($brand) {
+            $sql .= " AND brand = ?";
+            $params[] = $brand;
         }
-        if (!empty($price_range)) {
-            list($min, $max) = explode('-', $price_range);
-            if ($max === '+') {
-                $sql .= " AND product_price >= ?";
-                $params[] = $min;
-            } else {
-                $sql .= " AND product_price BETWEEN ? AND ?";
-                $params[] = $min;
-                $params[] = $max;
-            }
+        
+        if ($min_price) {
+            $sql .= " AND product_price >= ?";
+            $params[] = $min_price;
         }
-
-        $sql .= " AND product_stock > 0";
-
-        $stmt = $this->db->prepare($sql);
-        if (!empty($params)) {
-            $types = str_repeat('s', count($params));
-            $stmt->bind_param($types, ...$params);
+        
+        if ($max_price) {
+            $sql .= " AND product_price <= ?";
+            $params[] = $max_price;
         }
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);
+        
+        return $this->db_fetch_all($sql, $params);
+    }
+    
+    // Get product count
+    public function get_product_count() {
+        $sql = "SELECT COUNT(*) as total FROM products";
+        $result = $this->db_fetch_one($sql);
+        return $result['total'];
     }
 }
+?>

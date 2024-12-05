@@ -19,22 +19,41 @@ if (!class_exists('db_connection')) {
             }
         }
 
-        public function db_query($sql) {
-            $result = $this->db->query($sql);
-            if (!$result) {
-                error_log("SQL Error: " . $this->db->error . " in query: " . substr($sql, 0, 500));
+        public function db_query($sql, $params = []) {
+            $stmt = $this->db->prepare($sql);
+            if ($stmt === false) {
+                error_log("SQL Prepare Error: " . $this->db->error);
                 return false;
             }
-            return $result;
+
+            if (!empty($params)) {
+                $types = str_repeat('s', count($params)); // Assuming all parameters are strings
+                $stmt->bind_param($types, ...$params);
+            }
+
+            if (!$stmt->execute()) {
+                error_log("SQL Execute Error: " . $stmt->error);
+                return false;
+            }
+
+            // For INSERT, UPDATE, DELETE queries
+            if (stripos($sql, 'INSERT') === 0 || stripos($sql, 'UPDATE') === 0 || stripos($sql, 'DELETE') === 0) {
+                $affected_rows = $stmt->affected_rows;
+                $stmt->close();
+                return $affected_rows > 0;
+            }
+
+            // For SELECT queries
+            return $stmt->get_result();
         }
 
-        public function db_fetch_all($sql) {
-            $result = $this->db_query($sql);
+        public function db_fetch_all($sql, $params = []) {
+            $result = $this->db_query($sql, $params);
             return $result !== false ? $result->fetch_all(MYSQLI_ASSOC) : false;
         }
         
-        public function db_fetch_one($sql) {
-            $result = $this->db_query($sql);
+        public function db_fetch_one($sql, $params = []) {
+            $result = $this->db_query($sql, $params);
             return $result !== false ? $result->fetch_assoc() : false;
         }
 

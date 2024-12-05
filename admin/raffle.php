@@ -8,10 +8,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 include_once("../controllers/raffle_controller.php");
-$entries = json_decode(get_all_entries_ctr(), true);
-if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
-    error_log("JSON decode error: " . json_last_error_msg());
-    $entries = array();
+$entries_json = get_all_entries_ctr();
+$entries_data = json_decode($entries_json, true);
+$entries = [];
+
+if ($entries_data && isset($entries_data['success']) && $entries_data['success']) {
+    $entries = $entries_data['data'];
+} else {
+    error_log("Error fetching entries: " . $entries_json);
+    $entries = [];
 }
 ?>
 
@@ -21,8 +26,53 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
     <meta charset="UTF-8">
     <title>Raffle Entries - Parent Company Admin</title>
     <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="../css/admin.css">
     <style>
+        .raffle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .raffle-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .raffle-card h3 {
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-size: 1.2rem;
+        }
+
+        .raffle-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .raffle-info label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .raffle-info span {
+            color: #333;
+        }
+
+        .raffle-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
         .winner-card {
             background: #1a1a1a;
             padding: 2rem;
@@ -43,45 +93,6 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
             font-size: 1.1rem;
         }
 
-        .winner-card strong {
-            color: #fff;
-            font-weight: bold;
-        }
-
-        .error-card {
-            background: #ff4444;
-            padding: 2rem;
-            border-radius: 8px;
-            text-align: center;
-            margin-top: 1rem;
-        }
-
-        .error-card h3 {
-            color: #fff;
-            margin-bottom: 1rem;
-        }
-
-        .error-card p {
-            color: #fff;
-        }
-
-        .loading-card {
-            background: #1a1a1a;
-            padding: 2rem;
-            border-radius: 8px;
-            text-align: center;
-            margin-top: 1rem;
-        }
-
-        .loading-card h3 {
-            color: #fff;
-            margin-bottom: 1rem;
-        }
-
-        .loading-card p {
-            color: #fff;
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -94,7 +105,7 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
         }
 
         .modal-content {
-            background-color: #222;
+            background-color: #fff;
             margin: 10% auto;
             padding: 20px;
             border-radius: 8px;
@@ -104,7 +115,7 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
         }
 
         .close {
-            color: #aaa;
+            color: #666;
             float: right;
             font-size: 28px;
             font-weight: bold;
@@ -115,18 +126,44 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
         }
 
         .close:hover {
-            color: #fff;
+            color: #333;
         }
 
         .modal-header {
             padding-bottom: 1rem;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid #eee;
             margin-bottom: 1rem;
         }
 
         .modal-header h2 {
-            color: #fff;
+            color: #333;
             margin: 0;
+        }
+
+        .search-box {
+            margin-bottom: 1.5rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        .no-entries {
+            text-align: center;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #666;
         }
     </style>
 </head>
@@ -147,38 +184,46 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h3>Total Entries</h3>
-                        <p class="stat-number"><?= get_entry_count_ctr() ?></p>
+                        <p class="stat-number"><?= count($entries) ?></p>
                     </div>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Name</th>
-                                <th>Phone</th>
-                                <th>Instagram</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($entries as $entry): ?>
-                                <tr>
-                                    <td><?= date('M d, Y', strtotime($entry['created_at'])) ?></td>
-                                    <td><?= htmlspecialchars($entry['name']) ?></td>
-                                    <td><?= htmlspecialchars($entry['phone']) ?></td>
-                                    <td>@<?= htmlspecialchars($entry['instagram']) ?></td>
-                                    <td>
-                                        <button class="btn-small btn-danger" 
-                                                onclick="deleteEntry(<?= $entry['entry_id'] ?>)">
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                <div class="search-box">
+                    <input type="text" id="entry-search" placeholder="Search entries by name, phone, or Instagram handle...">
+                </div>
+
+                <div class="raffle-grid" id="entries-grid">
+                    <?php if (empty($entries)): ?>
+                        <div class="no-entries">
+                            <h3>No Raffle Entries</h3>
+                            <p>There are currently no entries in the raffle.</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach($entries as $entry): ?>
+                            <div class="raffle-card" data-entry-id="<?= $entry['entry_id'] ?>" data-search="<?= strtolower($entry['name'] . ' ' . $entry['phone'] . ' ' . $entry['instagram']) ?>">
+                                <h3>Entry #<?= $entry['entry_id'] ?></h3>
+                                <div class="raffle-info">
+                                    <label>Name:</label>
+                                    <span><?= htmlspecialchars($entry['name']) ?></span>
+                                    
+                                    <label>Phone:</label>
+                                    <span><?= htmlspecialchars($entry['phone']) ?></span>
+                                    
+                                    <label>Instagram:</label>
+                                    <span>@<?= htmlspecialchars($entry['instagram']) ?></span>
+                                    
+                                    <label>Date:</label>
+                                    <span><?= date('M d, Y', strtotime($entry['created_at'])) ?></span>
+                                </div>
+                                <div class="raffle-actions">
+                                    <button class="btn-small btn-danger" 
+                                            onclick="deleteEntry(<?= $entry['entry_id'] ?>)">
+                                        Delete Entry
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -197,28 +242,76 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
         </div>
     </div>
 
-    <?php
-    require_once('../classes/raffle_class.php');
-
-    $raffle = new raffle_class();
-
-    $entries = json_decode($raffle->get_all_entries(), true);
-
-    if ($entries['success']) {
-        echo '<div class="entries-list">';
-        echo '<h2>Raffle Entries</h2>';
-        echo '<ul>';
-        foreach ($entries['data'] as $entry) {
-            echo '<li>' . htmlspecialchars($entry['name']) . ' - ' . htmlspecialchars($entry['phone']) . '</li>';
-        }
-        echo '</ul>';
-        echo '</div>';
-    } else {
-        echo '<div class="alert error">' . htmlspecialchars($entries['message']) . '</div>';
-    }
-    ?>
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+    // Search functionality
+    document.getElementById('entry-search').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const entries = document.querySelectorAll('.raffle-card');
+        
+        entries.forEach(entry => {
+            const searchData = entry.getAttribute('data-search').toLowerCase();
+            if (searchData.includes(searchTerm)) {
+                entry.style.display = '';
+            } else {
+                entry.style.display = 'none';
+            }
+        });
+    });
+
+    // Close modal when clicking the X
+    document.querySelector('.close').addEventListener('click', function() {
+        document.getElementById('winner-modal').style.display = 'none';
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('winner-modal');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    function deleteEntry(entryId) {
+        if (confirm('Are you sure you want to delete this entry?')) {
+            const formData = new FormData();
+            formData.append('entry_id', entryId);
+            
+            fetch('../actions/admin_delete_entry.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Remove the entry card from the UI
+                    const entryCard = document.querySelector(`.raffle-card[data-entry-id="${entryId}"]`);
+                    if (entryCard) {
+                        entryCard.remove();
+                        
+                        // Update total entries count
+                        const totalEntriesElement = document.querySelector('.stat-number');
+                        if (totalEntriesElement) {
+                            const currentCount = parseInt(totalEntriesElement.textContent);
+                            totalEntriesElement.textContent = currentCount - 1;
+                        }
+                    }
+                } else {
+                    alert('Error deleting entry: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the entry');
+            });
+        }
+    }
+
     function exportEntries() {
         window.location.href = '../actions/admin_export_raffle.php';
     }
@@ -228,34 +321,16 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
         const detailsDiv = document.getElementById('winner-details');
         
         // Show loading state
-        detailsDiv.innerHTML = `
-            <div class="loading-card">
-                <h3>🔄 Selecting Winner...</h3>
-                <p>Please wait...</p>
-            </div>
-        `;
+        detailsDiv.innerHTML = '<div class="loading-card"><h3>Selecting Winner...</h3><p>Please wait...</p></div>';
         modal.style.display = 'block';
-
-        // Use absolute path
-        fetch('/ReThread_Collective/actions/admin_select_winner.php', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+        
+        fetch('../actions/admin_select_winner.php')
+        .then(response => response.json())
         .then(data => {
-            if(data.success) {
+            if (data.success && data.winner) {
                 detailsDiv.innerHTML = `
                     <div class="winner-card">
-                        <h3>🎉 Selected Winner:</h3>
+                        <h3>🎉 Congratulations! 🎉</h3>
                         <p><strong>Name:</strong> ${data.winner.name}</p>
                         <p><strong>Phone:</strong> ${data.winner.phone}</p>
                         <p><strong>Instagram:</strong> @${data.winner.instagram}</p>
@@ -265,59 +340,20 @@ if ($entries === null && json_last_error() !== JSON_ERROR_NONE) {
             } else {
                 detailsDiv.innerHTML = `
                     <div class="error-card">
-                        <h3>⚠️ Error</h3>
-                        <p>${data.message || 'Failed to select winner. Please try again.'}</p>
+                        <h3>Error</h3>
+                        <p>${data.message || 'No entries available'}</p>
                     </div>
                 `;
             }
         })
         .catch(error => {
-            console.error('Error:', error);
             detailsDiv.innerHTML = `
                 <div class="error-card">
-                    <h3>⚠️ Error</h3>
-                    <p>Failed to communicate with the server. Please check:</p>
-                    <ul>
-                        <li>Your internet connection</li>
-                        <li>That you're still logged in</li>
-                        <li>That the server is running</li>
-                    </ul>
-                    <p class="error-details">Error: ${error.message}</p>
+                    <h3>Error</h3>
+                    <p>Failed to select winner. Please try again.</p>
                 </div>
             `;
         });
-    }
-
-    // Close modal when clicking on X or outside the modal
-    document.querySelector('.close').onclick = function() {
-        document.getElementById('winner-modal').style.display = 'none';
-    }
-
-    window.onclick = function(event) {
-        const modal = document.getElementById('winner-modal');
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    }
-
-    function deleteEntry(entryId) {
-        if(confirm('Are you sure you want to delete this entry?')) {
-            fetch('../actions/admin_delete_entry.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    entry_id: entryId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.success) {
-                    location.reload();
-                }
-            });
-        }
     }
     </script>
 </body>
